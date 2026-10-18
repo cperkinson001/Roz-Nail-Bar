@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roz’ Nail Bar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --card:#ffffff; --ink:#111111; --muted:#6b6b6b; --line:#e5e5e5;
+    --accent:#d0142c; --accent-ink:#ffffff; --soft:#f4f4f4; --ok:#1f8a4c; --warn:#b5650d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;line-height:1.45}
+  header{padding:28px 16px 20px;text-align:center;background:#111;color:#fff;border-bottom:4px solid var(--accent)}
+  h1{font-family:Fraunces,serif;font-size:2rem;margin:0}
+  .tagline{color:#ff6b7d;margin:4px 0 0}
+  main{max-width:1000px;margin:0 auto;padding:12px 16px 48px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;text-align:left;padding:0;font:inherit;color:inherit}
+  .card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--soft)}
+  .card .info{padding:10px 12px}
+  .card .name{font-weight:700}
+  .price{color:var(--accent);font-weight:700}
+  .badge{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--muted);margin-left:6px}
+  .empty{text-align:center;color:var(--muted);padding:40px 0}
+  dialog{border:none;border-radius:20px;padding:0;width:min(560px,calc(100% - 24px));max-height:calc(100% - 24px);background:var(--card);color:var(--ink)}
+  dialog::backdrop{background:rgba(0,0,0,.55)}
+  .dlg{padding:16px}
+  .photos{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory}
+  .photos img{width:100%;flex:0 0 100%;aspect-ratio:1;object-fit:cover;border-radius:14px;scroll-snap-align:center}
+  .close{float:right;background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted)}
+  form{display:grid;gap:12px}
+  label{display:grid;gap:4px;font-weight:600;font-size:.92rem}
+  input,select,textarea{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);width:100%}
+  textarea{min-height:70px}
+  fieldset{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  fieldset label{display:flex;gap:8px;align-items:center;font-weight:400}
+  fieldset input{width:auto}
+  .btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:12px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:inline-block}
+  .btn.secondary{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+  .btn.small{padding:6px 10px;font-size:.85rem}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted)}
+  .total{font-size:1.1rem}
+  .confirm{text-align:center;display:grid;gap:12px}
+  .code{font-family:Fraunces,serif;font-size:1.6rem;letter-spacing:2px}
+  footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 16px 32px}
+  footer a{color:inherit}
+  /* admin */
+  .tabs{display:flex;gap:8px;margin:12px 0}
+  .tabs button{flex:1}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+  .list-item{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+  .list-item:first-child{border-top:none}
+  .list-item img{width:56px;height:56px;object-fit:cover;border-radius:10px;background:var(--soft)}
+  .list-item .grow{flex:1;min-width:0}
+  .order{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:4px}
+  .order:first-child{border-top:none}
+  .status-pending{color:var(--warn)} .status-paid,.status-shipped,.status-done{color:var(--ok)}
+  pre.addr{white-space:pre-wrap;margin:0;font-family:inherit}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="storeName"></h1>
+  <p class="tagline" id="storeTagline"></p>
+</header>
+
+<!-- ============ SHOP ============ -->
+<main id="shopView">
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="emptyShop" hidden>New sets coming soon 💅</p>
+</main>
+
+<dialog id="setDialog"><div class="dlg" id="setDialogBody"></div></dialog>
+
+<!-- ============ ADMIN ============ -->
+<main id="adminView" hidden>
+  <div class="panel" id="loginPanel">
+    <h2>Shop owner login</h2>
+    <form id="loginForm">
+      <label>Email <input type="email" name="email" required autocomplete="username"></label>
+      <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn">Log in</button>
+      <p class="muted" id="loginError"></p>
+    </form>
+  </div>
+
+  <div id="adminPanel" hidden>
+    <div class="row"><span class="muted" id="whoami"></span><button class="btn small secondary" id="logoutBtn">Log out</button><a class="btn small secondary" href="#">View shop</a></div>
+    <div class="tabs">
+      <button class="btn" data-tab="sets">My sets</button>
+      <button class="btn secondary" data-tab="orders">Orders <span id="pendingCount"></span></button>
+    </div>
+
+    <section id="tab-sets">
+      <div class="panel">
+        <h2 id="setFormTitle">Add a new set</h2>
+        <form id="setForm">
+          <label>Set name <input name="name" required maxlength="80" placeholder="Pink Chrome Almond"></label>
+          <label>Price ($) <input name="price" type="number" min="1" step="0.01" required></label>
+          <label>Description <textarea name="description" maxlength="600" placeholder="Shape, length, colors, how many nails…"></textarea></label>
+          <label>Photos (up to 3) <input name="photos" type="file" accept="image/*" multiple></label>
+          <p class="muted" id="photoNote"></p>
+          <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="available" checked style="width:auto"> Available to buy</label>
+          <div class="row">
+            <button class="btn" id="saveSetBtn">Save set</button>
+            <button class="btn secondary" type="button" id="cancelEditBtn" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel" id="adminSets"></div>
+    </section>
+
+    <section id="tab-orders" hidden>
+      <div class="panel">
+        <label>Show <select id="orderFilter">
+          <option value="open">Open orders</option>
+          <option value="all">All orders</option>
+        </select></label>
+      </div>
+      <div class="panel" id="adminOrders"></div>
+    </section>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+/* =====================================================================
+   1) STORE SETTINGS — edit these
+   ===================================================================== */
+const STORE = {
+  name: "Roz’ Nail Bar",
+  tagline: "Cute nails, zero apology.",
+  contactEmail: "",                        // a PARENT's email; leave blank to hide it
+  shippingFee: 3,                           // flat shipping charge in dollars
+  pickupNote: "Local pickup in the area — we'll email you to arrange a time.",
+  sizes: ["XS", "S", "M", "L", "Custom (add your measurements in notes)"],
+
+  /* -------- PAYMENT — change this block to switch payment methods -------- */
+  payment: {
+    method: "venmo",                        // "venmo" for now; add others below later
+    venmoUser: "Roshelle_Perkinson"        // without the @
+  }
+};
+
+/* =====================================================================
+   2) FIREBASE CONFIG — paste from Firebase console → Project settings
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDNa-8EEiUxANpjPoQwSMHdA2U_tA9Pvvg",
+  authDomain: "roz-nail-bar.firebaseapp.com",
+  projectId: "roz-nail-bar",
+  storageBucket: "roz-nail-bar.firebasestorage.app",
+  messagingSenderId: "603327290518",
+  appId: "1:603327290518:web:56fca68caa8a1aa66176b7"
+};
+
+/* =====================================================================
+   Payment providers. To switch later, add a provider here and set
+   STORE.payment.method to its key. Nothing else needs to change.
+   ===================================================================== */
+const PAYMENT_PROVIDERS = {
+  venmo: {
+    buttonLabel: "Pay with Venmo",
+    link: o => `https://venmo.com/${encodeURIComponent(STORE.payment.venmoUser)}?txn=pay&amount=${o.total.toFixed(2)}&note=${encodeURIComponent("Order " + o.code)}`,
+    instructions: o => `Send <strong>${money(o.total)}</strong> to <strong>@${esc(STORE.payment.venmoUser)}</strong> on Venmo with the note <strong>Order ${esc(o.code)}</strong>. Your order is confirmed once payment arrives.`
+  }
+  // Example for later:
+  // stripe: { buttonLabel: "Pay by card", link: o => o.stripeLink, instructions: o => "..." }
+};
+
+/* ===================================================================== */
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const $ = (s, el = document) => el.querySelector(s);
+const money = n => "$" + Number(n || 0).toFixed(2);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const provider = () => PAYMENT_PROVIDERS[STORE.payment.method];
+
+document.title = STORE.name;
+$("#storeName").textContent = STORE.name;
+$("#storeTagline").textContent = STORE.tagline;
+$("#footer").innerHTML = STORE.contactEmail
+  ? `Questions? <a href="mailto:${esc(STORE.contactEmail)}">${esc(STORE.contactEmail)}</a>`
+  : `Questions? Add them to the notes when you order.`;
+
+/* ---------------- Routing (#admin = owner page) ---------------- */
+function route() {
+  const admin = location.hash === "#admin";
+  $("#shopView").hidden = admin;
+  $("#adminView").hidden = !admin;
+}
+window.addEventListener("hashchange", route);
+route();
+
+/* ---------------- Sets (public) ---------------- */
+let sets = [];
+onSnapshot(query(collection(db, "sets"), orderBy("createdAt", "desc")), snap => {
+  sets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderShop();
+  renderAdminSets();
+});
+
+function renderShop() {
+  const visible = sets;
+  $("#emptyShop").hidden = visible.length > 0;
+  $("#grid").innerHTML = visible.map(s => `
+    <button class="card" data-id="${s.id}">
+      <img src="${s.photos?.[0] || ""}" alt="${esc(s.name)}" loading="lazy">
+      <div class="info">
+        <div class="name">${esc(s.name)}</div>
+        <span class="price">${money(s.price)}</span>${s.available ? "" : `<span class="badge">Sold out</span>`}
+      </div>
+    </button>`).join("");
+}
+
+$("#grid").addEventListener("click", e => {
+  const card = e.target.closest(".card");
+  if (card) openSet(card.dataset.id);
+});
+
+function openSet(id) {
+  const s = sets.find(x => x.id === id);
+  if (!s) return;
+  const body = $("#setDialogBody");
+  body.innerHTML = `
+    <button class="close" aria-label="Close">&times;</button>
+    <h2 style="margin:0 0 8px">${esc(s.name)}</h2>
+    <div class="photos">${(s.photos || []).map(p => `<img src="${p}" alt="">`).join("")}</div>
+    <p class="price total">${money(s.price)}</p>
+    ${s.description ? `<p>${esc(s.description).replace(/\n/g, "<br>")}</p>` : ""}
+    ${s.available ? orderFormHTML() : `<p class="muted">This set is sold out.</p>`}
+  `;
+  $(".close", body).onclick = () => $("#setDialog").close();
+  if (s.available) wireOrderForm(s);
+  $("#setDialog").showModal();
+}
+
+function orderFormHTML() {
+  return `
+  <form id="orderForm">
+    <label>Size <select name="size">${STORE.sizes.map(z => `<option>${esc(z)}</option>`).join("")}</select></label>
+    <fieldset>
+      <legend>Delivery</legend>
+      <label><input type="radio" name="delivery" value="pickup" checked> Local pickup (free)</label>
+      <label><input type="radio" name="delivery" value="ship"> Ship to me (+${money(STORE.shippingFee)})</label>
+    </fieldset>
+    <label>Your name <input name="buyerName" required maxlength="80" autocomplete="name"></label>
+    <label>Email <input name="buyerEmail" type="email" required maxlength="120" autocomplete="email"></label>
+    <label id="addrWrap" hidden>Shipping address <textarea name="address" maxlength="300" autocomplete="street-address"></textarea></label>
+    <label>Notes (optional) <textarea name="notes" maxlength="500"></textarea></label>
+    <p class="total">Total: <strong id="orderTotal"></strong></p>
+    <button class="btn">Place order</button>
+    <p class="muted" id="orderError"></p>
+  </form>`;
+}
+
+function wireOrderForm(s) {
+  const f = $("#orderForm");
+  const calc = () => {
+    const ship = f.delivery.value === "ship";
+    $("#addrWrap").hidden = !ship;
+    f.address.required = ship;
+    const total = Number(s.price) + (ship ? STORE.shippingFee : 0);
+    $("#orderTotal").textContent = money(total);
+    return { ship, total };
+  };
+  f.addEventListener("change", calc);
+  calc();
+
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const { ship, total } = calc();
+    const btn = $("button", f);
+    btn.disabled = true; btn.textContent = "Placing order…";
+    const order = {
+      code: makeCode(),
+      setId: s.id,
+      setName: s.name,
+      price: Number(s.price),
+      size: f.size.value,
+      delivery: ship ? "ship" : "pickup",
+      shippingFee: ship ? STORE.shippingFee : 0,
+      total,
+      buyerName: f.buyerName.value.trim(),
+      buyerEmail: f.buyerEmail.value.trim(),
+      address: ship ? f.address.value.trim() : "",
+      notes: f.notes.value.trim(),
+      paymentMethod: STORE.payment.method,
+      status: "pending",
+      createdAt: serverTimestamp()
+    };
+    try {
+      await addDoc(collection(db, "orders"), order);
+      showConfirmation(order);
+    } catch (err) {
+      console.error(err);
+      $("#orderError").textContent = "Something went wrong placing your order. Please try again.";
+      btn.disabled = false; btn.textContent = "Place order";
+    }
+  });
+}
+
+function makeCode() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from(crypto.getRandomValues(new Uint8Array(5)), b => chars[b % chars.length]).join("");
+}
+
+function showConfirmation(o) {
+  const p = provider();
+  $("#setDialogBody").innerHTML = `
+    <button class="close" aria-label="Close">&times;</button>
+    <div class="confirm">
+      <h2 style="margin:0">Order placed!</h2>
+      <div>Your order number<div class="code">${esc(o.code)}</div></div>
+      <p>${p.instructions(o)}</p>
+      <a class="btn" href="${p.link(o)}" target="_blank" rel="noopener">${esc(p.buttonLabel)}</a>
+      <p class="muted">${o.delivery === "pickup" ? esc(STORE.pickupNote) : "We'll email you when it ships."}</p>
+    </div>`;
+  $(".close").onclick = () => $("#setDialog").close();
+}
+
+/* ---------------- Admin ---------------- */
+let unsubOrders = null;
+let orders = [];
+let editingId = null;
+
+onAuthStateChanged(auth, user => {
+  $("#loginPanel").hidden = !!user;
+  $("#adminPanel").hidden = !user;
+  if (user) {
+    $("#whoami").textContent = `Logged in as ${user.email}`;
+    unsubOrders = onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), snap => {
+      orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderOrders();
+    }, err => {
+      $("#adminOrders").innerHTML = `<p class="muted">This login can't see orders. Make sure its email is listed in the Firestore rules.</p>`;
+      console.error(err);
+    });
+  } else {
+    if (unsubOrders) unsubOrders();
+    unsubOrders = null; orders = [];
+  }
+});
+
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = e.target;
+  $("#loginError").textContent = "";
+  try { await signInWithEmailAndPassword(auth, f.email.value, f.password.value); f.reset(); }
+  catch { $("#loginError").textContent = "Wrong email or password."; }
+});
+$("#logoutBtn").onclick = () => signOut(auth);
+
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("secondary", x !== b));
+  $("#tab-sets").hidden = b.dataset.tab !== "sets";
+  $("#tab-orders").hidden = b.dataset.tab !== "orders";
+});
+
+function renderAdminSets() {
+  const el = $("#adminSets");
+  if (!el) return;
+  el.innerHTML = sets.length ? `<h2>Your sets</h2>` + sets.map(s => `
+    <div class="list-item">
+      <img src="${s.photos?.[0] || ""}" alt="">
+      <div class="grow"><strong>${esc(s.name)}</strong><br><span class="muted">${money(s.price)} · ${s.available ? "Available" : "Sold out"}</span></div>
+      <button class="btn small secondary" data-act="toggle" data-id="${s.id}">${s.available ? "Mark sold out" : "Mark available"}</button>
+      <button class="btn small secondary" data-act="edit" data-id="${s.id}">Edit</button>
+      <button class="btn small secondary" data-act="delete" data-id="${s.id}">Delete</button>
+    </div>`).join("") : `<p class="muted">No sets yet — add your first one above.</p>`;
+}
+
+$("#adminSets").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const s = sets.find(x => x.id === b.dataset.id);
+  if (b.dataset.act === "toggle") await updateDoc(doc(db, "sets", s.id), { available: !s.available });
+  if (b.dataset.act === "delete" && confirm(`Delete "${s.name}"?`)) await deleteDoc(doc(db, "sets", s.id));
+  if (b.dataset.act === "edit") startEdit(s);
+});
+
+function startEdit(s) {
+  editingId = s.id;
+  const f = $("#setForm");
+  f.name.value = s.name; f.price.value = s.price; f.description.value = s.description || "";
+  f.available.checked = !!s.available; f.photos.value = "";
+  $("#photoNote").textContent = "Leave photos empty to keep the current ones.";
+  $("#setFormTitle").textContent = "Edit set";
+  $("#cancelEditBtn").hidden = false;
+  f.scrollIntoView({ behavior: "smooth" });
+}
+function resetSetForm() {
+  editingId = null;
+  $("#setForm").reset();
+  $("#photoNote").textContent = "";
+  $("#setFormTitle").textContent = "Add a new set";
+  $("#cancelEditBtn").hidden = true;
+}
+$("#cancelEditBtn").onclick = resetSetForm;
+
+$("#setForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = e.target;
+  const btn = $("#saveSetBtn");
+  const files = [...f.photos.files].slice(0, 3);
+  if (!editingId && !files.length) { $("#photoNote").textContent = "Add at least one photo."; return; }
+  btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    const data = {
+      name: f.name.value.trim(),
+      price: Math.round(Number(f.price.value) * 100) / 100,
+      description: f.description.value.trim(),
+      available: f.available.checked
+    };
+    if (files.length) data.photos = await Promise.all(files.map(compressImage));
+    if (editingId) await updateDoc(doc(db, "sets", editingId), data);
+    else await addDoc(collection(db, "sets"), { ...data, createdAt: serverTimestamp() });
+    resetSetForm();
+  } catch (err) {
+    console.error(err);
+    $("#photoNote").textContent = "Couldn't save. Try fewer or smaller photos.";
+  } finally {
+    btn.disabled = false; btn.textContent = "Save set";
+  }
+});
+
+// Shrinks photos so they can be stored in the database for free (no paid Storage plan needed)
+async function compressImage(file) {
+  const img = await createImageBitmap(file);
+  let scale = Math.min(1, 900 / Math.max(img.width, img.height));
+  let quality = 0.8, out = "";
+  for (let i = 0; i < 6; i++) {
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    out = c.toDataURL("image/jpeg", quality);
+    if (out.length <= 280000) break;
+    quality -= 0.1; scale *= 0.85;
+  }
+  return out;
+}
+
+$("#orderFilter").onchange = renderOrders;
+
+const STATUSES = { pending: "Waiting for payment", paid: "Paid", shipped: "Shipped", done: "Picked up / complete", cancelled: "Cancelled" };
+
+function renderOrders() {
+  const open = $("#orderFilter").value === "open";
+  const list = orders.filter(o => !open || ["pending", "paid"].includes(o.status));
+  const pending = orders.filter(o => o.status === "pending").length;
+  $("#pendingCount").textContent = pending ? `(${pending})` : "";
+  $("#adminOrders").innerHTML = list.length ? list.map(o => `
+    <div class="order">
+      <div class="row"><strong>#${esc(o.code)}</strong> <span class="status-${esc(o.status)}">${STATUSES[o.status] || esc(o.status)}</span></div>
+      <div>${esc(o.setName)} · size ${esc(o.size)} · <strong>${money(o.total)}</strong>${o.shippingFee ? ` (incl. ${money(o.shippingFee)} shipping)` : ""}</div>
+      <div>${esc(o.buyerName)} · <a href="mailto:${esc(o.buyerEmail)}">${esc(o.buyerEmail)}</a></div>
+      <div class="muted">${o.delivery === "ship" ? "Ship to:" : "Local pickup"}</div>
+      ${o.address ? `<pre class="addr">${esc(o.address)}</pre>` : ""}
+      ${o.notes ? `<div class="muted">Notes: ${esc(o.notes)}</div>` : ""}
+      <label>Status <select data-order="${o.id}">${Object.entries(STATUSES).map(([k, v]) => `<option value="${k}" ${k === o.status ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+    </div>`).join("") : `<p class="muted">No orders here yet.</p>`;
+}
+
+$("#adminOrders").addEventListener("change", async e => {
+  const sel = e.target.closest("select[data-order]");
+  if (sel) await updateDoc(doc(db, "orders", sel.dataset.order), { status: sel.value });
+});
+</script>
+</body>
+</html>
